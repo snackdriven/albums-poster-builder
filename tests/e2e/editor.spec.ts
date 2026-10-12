@@ -224,13 +224,11 @@ test("uploaded covers remain local, JSON backup preserves them, and dialog keybo
     /^data:image\/(png|jpeg|webp);base64,/,
   );
   await page.getByRole("button", { name: "Reset board", exact: true }).click();
-  await page
-    .getByLabel("Restore board from JSON")
-    .setInputFiles({
-      name: "board.json",
-      mimeType: "application/json",
-      buffer: backup,
-    });
+  await page.getByLabel("Restore board from JSON").setInputFiles({
+    name: "board.json",
+    mimeType: "application/json",
+    buffer: backup,
+  });
   await expect(
     page.getByRole("button", {
       name: "Slot 1: Local cover by Local artist",
@@ -246,4 +244,92 @@ test("uploaded covers remain local, JSON backup preserves them, and dialog keybo
       .locator("img")
       .evaluate((image: HTMLImageElement) => image.naturalWidth),
   ).toBe(500);
+});
+
+test("undo keeps settings changed after a removal", async ({ page }) => {
+  await setup(page);
+  await page
+    .getByRole("button", { name: "Slot 1: Album 1 by Artist 1", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Remove", exact: true }).click();
+  await page.getByLabel("Name or @handle").fill("New name");
+  await page
+    .getByRole("button", { name: "Background: Ice", exact: true })
+    .click();
+  await page.getByLabel("Show album and artist").uncheck();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(
+    page.getByRole("button", {
+      name: "Slot 1: Album 1 by Artist 1",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Name or @handle")).toHaveValue("New name");
+  await expect(
+    page.getByRole("button", { name: "Background: Ice", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("Show album and artist")).not.toBeChecked();
+});
+
+test("restores backups larger than browser storage with 15 local covers", async ({
+  page,
+}) => {
+  await setup(page, 15, 0);
+  const json = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 500;
+    canvas.height = 500;
+    const ctx = canvas.getContext("2d")!,
+      pixels = ctx.createImageData(500, 500);
+    let seed = 12345;
+    for (let i = 0; i < pixels.data.length; i += 4) {
+      for (let c = 0; c < 3; c++) {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        pixels.data[i + c] = seed >>> 24;
+      }
+      pixels.data[i + 3] = 255;
+    }
+    ctx.putImageData(pixels, 0, 0);
+    const cover = canvas.toDataURL("image/jpeg", 0.85);
+    return JSON.stringify(
+      {
+        gridSize: 15,
+        title: "Large backup",
+        background: "abyss",
+        showCaptions: true,
+        slots: Array.from({ length: 15 }, (_, i) => ({
+          deezerId: -(i + 1),
+          title: "Manual " + i,
+          artist: "Artist " + i,
+          year: null,
+          coverMd: cover,
+          coverLg: cover,
+        })),
+      },
+      null,
+      2,
+    );
+  });
+  const backup = Buffer.from(json);
+  expect(backup.length).toBeGreaterThan(5 * 1024 * 1024);
+  await page
+    .getByLabel("Restore board from JSON")
+    .setInputFiles({
+      name: "large-board.json",
+      mimeType: "application/json",
+      buffer: backup,
+    });
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "15",
+  );
+  await expect(page.getByLabel("Name or @handle")).toHaveValue("Large backup");
+  await expect(
+    page
+      .getByRole("button", {
+        name: "Slot 15: Manual 14 by Artist 14",
+        exact: true,
+      })
+      .locator("img"),
+  ).toBeVisible();
 });

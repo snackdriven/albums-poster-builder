@@ -1,3 +1,4 @@
+import { deflateSync, inflateSync } from "fflate";
 import { z } from "zod";
 
 export const GRID_SIZES = [9, 12, 15] as const;
@@ -102,22 +103,42 @@ export function encodePoster(poster: Poster): string {
       a ? [a.deezerId, a.title, a.artist, a.year, a.coverLg, a.coverMd] : null,
     ),
   };
-  return btoa(
-    String.fromCharCode(...new TextEncoder().encode(JSON.stringify(payload))),
-  )
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  if (bytes.length > 65536)
+    throw new Error(
+      "This board is too large for a share link. Use a JSON backup instead.",
+    );
+  const encoded =
+    "z." +
+    btoa(String.fromCharCode(...deflateSync(bytes)))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
+  if (encoded.length > 16000)
+    throw new Error(
+      "This board is too large for a share link. Use a JSON backup instead.",
+    );
+  return encoded;
 }
+
 export function decodePoster(encoded: string): Poster | null {
-  if (!encoded || encoded.length > 16000) return null;
+  if (!encoded || encoded.length > (encoded.startsWith("z.") ? 16000 : 65536))
+    return null;
   try {
     const bytes = Uint8Array.from(
-      atob(encoded.replace(/-/g, "+").replace(/_/g, "/")),
+      atob(
+        (encoded.startsWith("z.") ? encoded.slice(2) : encoded)
+          .replace(/-/g, "+")
+          .replace(/_/g, "/"),
+      ),
       (c) => c.charCodeAt(0),
     );
     const raw = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+      new TextDecoder("utf-8", { fatal: true }).decode(
+        encoded.startsWith("z.")
+          ? inflateSync(bytes, { out: new Uint8Array(65536) })
+          : bytes,
+      ),
     );
     if (
       raw.v !== 1 ||

@@ -91,3 +91,17 @@ describe("positional board behavior", () => {
     expect(posterDimensions(15, "story")).toEqual([1080, 1920]);
   });
 });
+
+it("round-trips a full board with long Unicode album metadata", () => {
+  const longBoard = {
+    ...board,
+    gridSize: 15,
+    slots: Array.from({ length: 15 }, (_, i) => ({
+      ...album,
+      deezerId: i + 1,
+      title: "音".repeat(191),
+      artist: "楽".repeat(190),
+    })),
+  };
+  expect(decodePoster(encodePoster(longBoard))).toEqual(longBoard);
+});

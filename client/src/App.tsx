@@ -358,6 +358,20 @@ export function App() {
     if (location.hash.startsWith("#poster="))
       history.replaceState(null, "", location.pathname + location.search);
     if (message) setToast({ message, previous: undo ? poster : undefined });
+    else
+      setToast((current) =>
+        current?.previous
+          ? {
+              ...current,
+              previous: {
+                ...current.previous,
+                title: next.title,
+                background: next.background,
+                showCaptions: next.showCaptions,
+              },
+            }
+          : current,
+      );
   }
   function move(from: number, to: number) {
     if (
@@ -433,10 +447,19 @@ export function App() {
     }
   }
   function share() {
-    const url = new URL(location.href);
-    url.hash = `poster=${encodePoster(poster)}`;
-    setShareUrl(url.href);
-    setSharing(true);
+    try {
+      const url = new URL(location.href);
+      url.hash = `poster=${encodePoster(poster)}`;
+      setShareUrl(url.href);
+      setSharing(true);
+      setError(null);
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "This board could not be shared. Use a JSON backup instead.",
+      );
+    }
   }
   async function copyShare() {
     try {
@@ -449,8 +472,8 @@ export function App() {
   async function restore(file?: File) {
     if (!file) return;
     try {
-      if (file.size > 5 * 1024 * 1024)
-        throw new Error("Choose a board JSON smaller than 5 MB.");
+      if (file.size > 32 * 1024 * 1024)
+        throw new Error("Choose a board JSON smaller than 32 MB.");
       const raw = JSON.parse(await file.text());
       if (
         !raw ||
