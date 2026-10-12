@@ -3,6 +3,10 @@
 Pick the 9, 12 or 15 albums that shaped you, arrange their covers, and download a
 print-ready poster or vertical story. No account is needed to build a board.
 
+Inspired by [my9albums.com](https://www.my9albums.com/), with 12/15-album boards
+as well as the original nine. Album data and cover art come from
+[Deezer](https://www.deezer.com/).
+
 **Hosting:** GitHub Pages at `https://albums.snackdriven.com`. Source, tests,
 builds and releases live on GitHub. Deezer supplies album search and cover art;
 Google Fonts supplies Inter. There is no Muse runtime, server or database.
