@@ -1,20 +1,94 @@
-// Typed RPC client. Types come straight from `server/src/actions.ts` — no
-// codegen. `createActionClient` returns a proxy that POSTs `{action, args}`
-// to `./actions` and returns the typed response.
-//
-// `import type { Actions }` is type-only by design: the client bundle never
-// pulls in any server runtime (bun:sqlite, file APIs, etc.). With
-// `verbatimModuleSyntax: true`, dropping `type` is a compile error.
+import type { Album } from "./poster";
+import { safeCover } from "./poster";
 
-import type { Actions } from "../../server/src/actions";
-import { createActionClient } from "@hatch/space-sdk/client";
-
-export const api = createActionClient<typeof Actions>();
-
-// Re-exported for convenience so client code can do
-//
-//     import { api, type ApiResponse } from "./api";
-//     type Article = ApiResponse<typeof api, "listArticles">["articles"][number];
-//
-// They are also available directly from "@hatch/space-sdk/client".
-export type { ApiRequest, ApiResponse } from "@hatch/space-sdk/client";
+// Deezer's JSONP endpoint lets a static site search without a proxy or API key.
+export function searchAlbums(
+  query: string,
+  signal?: AbortSignal,
+): Promise<Album[]> {
+  return new Promise((resolve, reject) => {
+    const callback = `albumSearch_${crypto.randomUUID().replace(/-/g, "")}`;
+    const globals = window as unknown as Record<string, unknown>;
+    const script = document.createElement("script");
+    const cleanup = () => {
+      clearTimeout(timer);
+      script.remove();
+      delete globals[callback];
+      signal?.removeEventListener("abort", abort);
+    };
+    const fail = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+    const abort = () =>
+      fail(new DOMException("Search cancelled", "AbortError"));
+    const timer = setTimeout(
+      () =>
+        fail(
+          new Error("Search timed out. Try again or add the album manually."),
+        ),
+      12000,
+    );
+    globals[callback] = (payload: unknown) => {
+      cleanup();
+      if (
+        !payload ||
+        typeof payload !== "object" ||
+        !Array.isArray((payload as { data?: unknown }).data)
+      ) {
+        reject(
+          new Error(
+            "Album search is unavailable. Try again or add it manually.",
+          ),
+        );
+        return;
+      }
+      const results: Album[] = [],
+        seen = new Set<number>();
+      for (const item of (payload as { data: unknown[] }).data) {
+        if (!item || typeof item !== "object") continue;
+        const a = item as Record<string, any>;
+        const coverMd = safeCover(
+          typeof a.cover_big === "string" ? a.cover_big : "",
+        );
+        const coverLg = safeCover(
+          typeof a.cover_xl === "string" ? a.cover_xl : coverMd,
+        );
+        if (
+          !Number.isInteger(a.id) ||
+          typeof a.title !== "string" ||
+          !a.title ||
+          !coverMd ||
+          seen.has(a.id)
+        )
+          continue;
+        seen.add(a.id);
+        results.push({
+          deezerId: a.id,
+          title: a.title.slice(0, 200),
+          artist:
+            typeof a.artist?.name === "string"
+              ? a.artist.name.slice(0, 200)
+              : "",
+          year: null,
+          coverMd,
+          coverLg,
+        });
+      }
+      resolve(results);
+    };
+    script.onerror = () =>
+      fail(
+        new Error(
+          "Search failed. Check your connection or add the album manually.",
+        ),
+      );
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) {
+      abort();
+      return;
+    }
+    script.src = `https://api.deezer.com/search/album?q=${encodeURIComponent(query.trim().slice(0, 120))}&limit=24&output=jsonp&callback=${callback}`;
+    document.head.append(script);
+  });
+}

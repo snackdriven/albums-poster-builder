@@ -1,41 +1,78 @@
 # Albums Poster Builder
 
-Build a poster of the albums that shaped you. Pick 9, 12, or 15 albums, arrange them in ranked order, and export a high-resolution poster.
+Pick the 9, 12 or 15 albums that shaped you, arrange their covers, and download a
+print-ready poster or vertical story. No account is needed to build a board.
 
-Inspired by my9albums.com — with the grid sizes the original doesn't offer.
+Inspired by [my9albums.com](https://www.my9albums.com/), with 12/15-album boards
+as well as the original nine. Album data and cover art come from
+[Deezer](https://www.deezer.com/).
 
-## Features
+**Hosting:** GitHub Pages at `https://albums.snackdriven.com`. Source, tests,
+builds and releases live on GitHub. Deezer supplies album search and cover art;
+Google Fonts supplies Inter. There is no Muse runtime, server or database.
 
-- **Three grid sizes** — 9 (3×3), 12, or 15 albums
-- **Album search** — search millions of albums via the Deezer API, with real cover art
-- **Ranked slots** — click an empty slot to fill it; click a filled slot to replace, swap, or remove it
-- **Poster options** — optional poster title and four neutral backgrounds (Black, Charcoal, Slate, White)
-- **Progress at a glance** — filled/total counter with a "Complete" state when the grid is full
-- **Autosave** — your poster is saved as you work and restored on reload
-- **PNG export** — download a high-resolution poster that matches what's on screen, footer included
+## Development
 
-## Tech stack
+Use Node.js 22.19 or newer:
 
-- React 19 + TypeScript
-- Tailwind CSS 4
-- TanStack Query
-- Drizzle ORM (SQLite)
-- Bun
-
-## Project layout
-
-```
-client/   React front end
-server/   Actions and data layer
-drizzle/  Database schema and migrations
+```sh
+npm ci
+npm run dev
 ```
 
-## Status and known limitations
+```sh
+npm test
+npx playwright install chromium
+npm run test:e2e
+npm run build
+npm run preview
+```
 
-This app was built on the Muse artifact runtime. Its storage and actions layer depends on `@hatch/space-sdk`, which is a local package from that runtime (see the `file:` dependency in `package.json`). As a result, the code does not yet run standalone outside that environment — replacing the SDK-backed storage layer is the main step toward making it independently deployable.
+`npm run build` checks TypeScript and produces `dist/`. GitHub Actions runs the
+board tests, desktop/mobile browser tests and production build on each push and
+pull request. Successful builds of `main` deploy automatically to Pages.
 
-Behavior gaps relative to the original site (drag-and-drop reorder, shareable poster links, per-cover captions, and more) are tracked in [Issue #1](../../issues/1).
+## Hosting setup
 
-## Data
+1. Use a public repository on GitHub Free, or a private repository with a plan
+   supporting Pages. A private source repository does not make the Pages site
+   private.
+2. In Settings → Pages, set the build source to **GitHub Actions**.
+3. In Cloudflare DNS for `snackdriven.com`, add a **DNS only** CNAME:
+   - Name: `albums`
+   - Target: `snackdriven.github.io` (no repository path)
+4. Set the Pages custom domain to `albums.snackdriven.com`. The build also ships
+   `client/public/CNAME`. Enable Enforce HTTPS once GitHub provisions its certificate.
 
-Album data and cover art are provided by [Deezer](https://www.deezer.com/).
+Default builds use `/` for the custom domain. To use the project URL without a
+custom domain, remove `client/public/CNAME`, clear the Pages custom domain, and
+set `PAGES_BASE_PATH=/albums-poster-builder/` for the build.
+
+## Boards, privacy and migration
+
+- The board is saved in this browser's local storage. It is not synced between
+  devices. Use **Back up board** and **Restore board** to transfer JSON files.
+- Share links carry a versioned copy of album details, positions, name, background
+  and caption preference in the URL fragment. No `/s/{id}` server is needed.
+  Anyone with the link can open it. Editing the received board saves a local copy.
+- Uploaded covers are cropped and resized locally. They stay on the device and
+  in JSON backups. Share links omit uploaded image bytes; recipients see their
+  album details and a placeholder instead.
+- Old Muse saved boards live in its database, not this Git export. This migration
+  cannot automatically read that database. If a board was exported as JSON with
+  `gridSize`, `title`, `background`, and `slots`, Restore board accepts that shape.
+  Otherwise recreate it using search before retiring the old artifact.
+- Browser storage failures are surfaced in the app; use a JSON backup if storage
+  is blocked or full.
+
+## Issue #1 coverage
+
+Drag-and-drop and neighbor arrows; captions with a visibility switch; name/
+@handle subtitle; full-board export gating; standard PNGs (1800×2100 for 9 albums,
+1800×2700 for 12, 1800×3300 for 15) and 1080×1920 stories; portable share links,
+Copy link and Post on X; duplicate prevention; manual albums and local cover
+uploads; undo for removal/reset; action feedback; and nine named backgrounds.
+
+The most-picked chart and global poster counter are intentionally omitted at the
+owner's request. Standard posters grow vertically for 12/15 albums so cover art
+and captions remain legible. Stories fit all three sizes into the same 9:16 frame.
