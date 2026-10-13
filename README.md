@@ -1,5 +1,12 @@
 # Albums Poster Builder
 
+**I've got too much personality to fit into nine choices.**
+
+So there's room for twelve. Or fifteen. Pick the favorites that rewired your brain,
+rearrange them until the order feels spiritually correct, and make a poster.
+
+A tiny monument to the records that became load-bearing parts of my personality.
+
 Pick the 9, 12 or 15 albums that shaped you, arrange their covers, and download a
 print-ready poster or vertical story. No account is needed to build a board.
 
