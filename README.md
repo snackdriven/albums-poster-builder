@@ -1,5 +1,7 @@
 # Albums Poster Builder
 
+Build a ranked grid of 9, 12, or 15 albums and download a high-resolution poster or vertical story. Runs in the browser with no account required.
+
 **I've got too much personality to fit into nine choices.**
 
 So there's room for twelve. Or fifteen. Pick the favorites that rewired your brain,
@@ -7,75 +9,94 @@ rearrange them until the order feels spiritually correct, and make a poster.
 
 A tiny monument to the records that became load-bearing parts of my personality.
 
-Pick the 9, 12 or 15 albums that shaped you, arrange their covers, and download a
-print-ready poster or vertical story. No account is needed to build a board.
+[Try the app](https://albums.snackdriven.com/) · [Report a bug](https://github.com/snackdriven/albums-poster-builder/issues)
 
-Inspired by [my9albums.com](https://www.my9albums.com/), with 12/15-album boards
-as well as the original nine. Album data and cover art come from
-[Deezer](https://www.deezer.com/).
+## Features
 
-**Hosting:** GitHub Pages at `https://albums.snackdriven.com`. Source, tests,
-builds and releases live on GitHub. Deezer supplies album search and cover art;
-Google Fonts supplies Inter. There is no Muse runtime, server or database.
+- Search albums by title or artist using real cover art.
+- Choose 9, 12, or 15 slots; reorder with drag-and-drop, arrows, or tap-to-swap.
+- Customize the background, name subtitle, and album/artist captions.
+- Create PNG posters and 1080 × 1920 stories once every slot is filled.
+- Share a board by URL, or transfer it with a JSON backup.
+- Add entries manually and upload local images.
+- Undo edits, prevent duplicates, and save automatically on the current device.
 
-## Development
+## Quick start
 
-Use Node.js 22.19 or newer:
+### Requirements
+
+- Node.js 22.19 or newer
+- npm, included with Node.js
 
 ```sh
+git clone https://github.com/snackdriven/albums-poster-builder.git
+cd albums-poster-builder
 npm ci
 npm run dev
 ```
 
+Open the local URL printed by Vite.
+
+## Development commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run typecheck` | Check TypeScript |
+| `npm test` | Run board and share-link tests |
+| `npm run test:e2e` | Run desktop and mobile browser tests |
+| `npm run build` | Check types and create `dist/` |
+| `npm run preview` | Preview the production build |
+
+Install the test browser before running browser tests:
+
 ```sh
-npm test
 npx playwright install chromium
-npm run test:e2e
-npm run build
-npm run preview
 ```
 
-`npm run build` checks TypeScript and produces `dist/`. GitHub Actions runs the
-board tests, desktop/mobile browser tests and production build on each push and
-pull request. Successful builds of `main` deploy automatically to Pages.
+## How it works
 
-## Hosting setup
+React and TypeScript provide the editor; Vite builds the static site.
+Deezer supplies album search through JSONP and hosts the cover art. No API key is required.
+Search and artwork availability depend on that external service. Manual entry and local image uploads provide a fallback. Google Fonts supplies Inter.
 
-1. Use a public repository on GitHub Free, or a private repository with a plan
-   supporting Pages. A private source repository does not make the Pages site
-   private.
-2. In Settings → Pages, set the build source to **GitHub Actions**.
-3. For a custom domain, add a **DNS only** CNAME with your DNS provider:
-   - Name: your chosen subdomain
-   - Target: `<github-username>.github.io` (no repository path)
-4. Set that custom domain in Pages and update `client/public/CNAME` to match.
-   Enable Enforce HTTPS once GitHub provisions its certificate.
+The app has no server, database, or Muse runtime.
 
-Default builds use `/` for the custom domain. To use the project URL without a
-custom domain, remove `client/public/CNAME`, clear the Pages custom domain, and
-set `PAGES_BASE_PATH=/albums-poster-builder/` for the build.
+| File | Responsibility |
+| --- | --- |
+| [App.tsx](client/src/App.tsx) | Editor and dialogs |
+| [api.ts](client/src/api.ts) | Search integration |
+| [poster.ts](client/src/poster.ts) | Board validation, storage, and sharing |
+| [export.ts](client/src/export.ts) | Image processing and PNG export |
+| [pages.yml](.github/workflows/pages.yml) | CI and GitHub Pages deployment |
 
-## Boards and privacy
+## Data and privacy
 
-- The board is saved in this browser's local storage. It is not synced between
-  devices. Use **Back up board** and **Restore board** to transfer JSON files.
-- Share links carry a versioned copy of album details, positions, name, background
-  and caption preference in the URL fragment. No `/s/{id}` server is needed.
-  Anyone with the link can open it. Editing the received board saves a local copy.
-- Uploaded covers are cropped and resized locally. They stay on the device and
-  in JSON backups. Share links omit uploaded image bytes; recipients see their
-  album details and a placeholder instead.
-- Browser storage failures are surfaced in the app; use a JSON backup if storage
-  is blocked or full.
+- Boards stay in this browser's local storage and do not sync between devices.
+- Use **Back up board** and **Restore board** to transfer or preserve a board.
+- Share links include a copy of the board's metadata, order, name, background, and caption preference in the URL fragment. Anyone with the link can view that copy.
+- Uploaded images remain on the device and in JSON backups. Share links exclude their image bytes and show placeholders instead.
+- Storage failures are shown in the editor; use a JSON backup if browser storage is unavailable.
 
-## Features
+## Export sizes
 
-Drag-and-drop and neighbor arrows; captions with a visibility switch; name/
-@handle subtitle; full-board export gating; standard PNGs (1800×2100 for 9 albums,
-1800×2700 for 12, 1800×3300 for 15) and 1080×1920 stories; portable share links,
-Copy link and Post on X; duplicate prevention; manual albums and local cover
-uploads; undo for removal/reset; action feedback; and nine named backgrounds.
+Standard posters are 1800 × 2100 for 9 albums, 1800 × 2700 for 12, and 1800 × 3300 for 15. Additional rows increase the poster height.
+Stories are 1080 × 1920 (9:16) for all board sizes.
 
-There is no most-picked chart or global poster counter. Standard posters grow
-vertically for 12/15 albums so cover art
-and captions remain legible. Stories fit all three sizes into the same 9:16 frame.
+## Deployment
+
+GitHub Actions validates pushes and pull requests. Successful builds of `main` deploy to GitHub Pages.
+
+1. Use a repository and GitHub plan that support Pages.
+2. Set **Settings → Pages → Source** to **GitHub Actions**.
+3. For a custom domain, point a DNS-only CNAME at `<github-username>.github.io`.
+4. Set the domain in Pages and update [client/public/CNAME](client/public/CNAME) to match.
+5. Enable **Enforce HTTPS** after certificate provisioning.
+
+To use the repository's Pages URL, remove `client/public/CNAME`, clear the custom domain in Pages, and set `PAGES_BASE_PATH=/albums-poster-builder/` during the build.
+
+## Help and contributions
+
+Use [GitHub Issues](https://github.com/snackdriven/albums-poster-builder/issues) for bugs and feature requests. For bugs, include the browser, reproduction steps, and expected behavior; leave private board data and credentials out of reports.
+
+Pull requests should describe the change and relevant validation. Run the applicable commands above before submitting changes to the editor, board format, or export behavior.
