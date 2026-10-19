@@ -5,8 +5,6 @@
 So there's room for twelve. Or fifteen. Pick the favorites that rewired your brain,
 rearrange them until the order feels spiritually correct, and make a poster.
 
-A tiny monument to the records that became load-bearing parts of my personality.
-
 [Try the app](https://albums.snackdriven.com/) · [Report a bug](https://github.com/snackdriven/albums-poster-builder/issues)
 
 ## Features
@@ -14,7 +12,8 @@ A tiny monument to the records that became load-bearing parts of my personality.
 - Search albums by title or artist, with real cover art.
 - Arrange 9, 12, or 15 picks; customize backgrounds, captions, and a name subtitle.
 - Export print-ready posters and 9:16 stories as PNGs.
-- Share links, JSON backups, manual entries, local image uploads, and undo.
+- Share a board link or export a JSON backup.
+- Add albums manually, upload your own cover art, and undo changes.
 
 No account required. Built with React, TypeScript, and Vite; Deezer supplies search and artwork without an API key.
 
@@ -40,7 +39,9 @@ Run `npx playwright install chromium` before browser tests.
 
 ## Privacy
 
-Boards save in this browser and do not sync across devices. Use JSON backups to transfer them. Anyone with a share link can view its board snapshot; uploaded image bytes stay local and in backups, and are excluded from share links.
+Your board saves in this browser and does not sync across devices. Use a JSON backup to move it elsewhere, including any uploaded cover art.
+
+Anyone with a share link can view that board snapshot. Share links exclude uploaded images; those stay in your browser and JSON backups.
 
 ## Deployment
 
@@ -48,4 +49,4 @@ Boards save in this browser and do not sync across devices. Use JSON backups to 
 
 For a repository Pages URL, remove the CNAME file, clear the custom domain, and build with `PAGES_BASE_PATH=/albums-poster-builder/`.
 
-Bugs and suggestions welcome via Issues; include reproduction steps and relevant checks with pull requests.
+Found a bug? Open an issue with the steps to reproduce it. For pull requests, include what changed and how you checked it.
