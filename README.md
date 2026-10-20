@@ -50,3 +50,7 @@ Anyone with a share link can view that board snapshot. Share links exclude uploa
 For a repository Pages URL, remove the CNAME file, clear the custom domain, and build with `PAGES_BASE_PATH=/albums-poster-builder/`.
 
 Found a bug? Open an issue with the steps to reproduce it. For pull requests, include what changed and how you checked it.
+
+## Commits and releases
+
+See [RELEASE.md](RELEASE.md) for Commitizen commands, SemVer and changelog maintenance.
