@@ -2,26 +2,32 @@ import type { Album } from "./poster";
 import { safeCover } from "./poster";
 
 // Deezer's JSONP endpoint lets a static site search without a proxy or API key.
+// It is securely executed inside a sandboxed iframe to prevent XSS vulnerabilities.
 export function searchAlbums(
   query: string,
   signal?: AbortSignal,
 ): Promise<Album[]> {
   return new Promise((resolve, reject) => {
     const callback = `albumSearch_${crypto.randomUUID().replace(/-/g, "")}`;
-    const globals = window as unknown as Record<string, unknown>;
-    const script = document.createElement("script");
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("sandbox", "allow-scripts");
+    iframe.style.display = "none";
+
     const cleanup = () => {
       clearTimeout(timer);
-      script.remove();
-      delete globals[callback];
+      window.removeEventListener("message", onMessage);
+      iframe.remove();
       signal?.removeEventListener("abort", abort);
     };
+
     const fail = (error: Error) => {
       cleanup();
       reject(error);
     };
+
     const abort = () =>
       fail(new DOMException("Search cancelled", "AbortError"));
+
     const timer = setTimeout(
       () =>
         fail(
@@ -29,7 +35,20 @@ export function searchAlbums(
         ),
       12000,
     );
-    globals[callback] = (payload: unknown) => {
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== iframe.contentWindow) return;
+      const payload = event.data;
+
+      if (payload && payload.type === "error") {
+        fail(
+          new Error(
+            "Search failed. Check your connection or add the album manually.",
+          ),
+        );
+        return;
+      }
+
       cleanup();
       if (
         !payload ||
@@ -43,6 +62,7 @@ export function searchAlbums(
         );
         return;
       }
+
       const results: Album[] = [],
         seen = new Set<number>();
       for (const item of (payload as { data: unknown[] }).data) {
@@ -77,18 +97,26 @@ export function searchAlbums(
       }
       resolve(results);
     };
-    script.onerror = () =>
-      fail(
-        new Error(
-          "Search failed. Check your connection or add the album manually.",
-        ),
-      );
+
+    window.addEventListener("message", onMessage);
     signal?.addEventListener("abort", abort, { once: true });
+
     if (signal?.aborted) {
       abort();
       return;
     }
-    script.src = `https://api.deezer.com/search/album?q=${encodeURIComponent(query.trim().slice(0, 120))}&limit=24&output=jsonp&callback=${callback}`;
-    document.head.append(script);
+
+    const url = `https://api.deezer.com/search/album?q=${encodeURIComponent(query.trim().slice(0, 120))}&limit=24&output=jsonp&callback=${callback}`;
+    iframe.srcdoc = `<script>
+      window["${callback}"] = function(data) {
+        window.parent.postMessage(data, "*");
+      };
+      const s = document.createElement("script");
+      s.src = "${url}";
+      s.onerror = function() { window.parent.postMessage({ type: "error" }, "*"); };
+      document.head.append(s);
+    <\/script>`;
+
+    document.body.append(iframe);
   });
 }
