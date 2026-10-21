@@ -63,37 +63,14 @@ function fitText(
   }
   return text.slice(0, best) + "…";
 }
-export async function exportPosterPng(poster: Poster, format: Format) {
-  if (poster.slots.some((a) => !a))
-    throw new Error("Fill every slot before creating a poster.");
-  await document.fonts.ready;
-  const [width, height] = posterDimensions(poster.gridSize, format);
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas is not available in this browser.");
-  const bg =
-    BACKGROUNDS.find((b) => b.id === poster.background) ?? BACKGROUNDS[0]!;
-  ctx.fillStyle = bg.color;
-  ctx.fillRect(0, 0, width, height);
-  const pad = Math.round(width * 0.04),
-    rows = poster.gridSize / 3,
-    gap = Math.round(width * 0.012);
-  const header = format === "story" ? 180 : 200,
-    footer = 80;
-  const caption = poster.showCaptions ? (format === "story" ? 66 : 72) : 0;
-  const cell = Math.floor(
-    Math.min(
-      (width - 2 * pad - 2 * gap) / 3,
-      (height - header - footer - (rows - 1) * gap) / rows - caption,
-    ),
-  );
-  const gridWidth = cell * 3 + gap * 2,
-    startX = (width - gridWidth) / 2;
-  const gridHeight = rows * (cell + caption) + (rows - 1) * gap,
-    startY = header + (height - header - footer - gridHeight) / 2;
-  const ink = bg.light ? "#171717" : "#fafafa";
+function drawHeader(
+  ctx: CanvasRenderingContext2D,
+  poster: Poster,
+  format: Format,
+  width: number,
+  pad: number,
+  ink: string,
+) {
   ctx.fillStyle = ink;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -113,9 +90,21 @@ export async function exportPosterPng(poster: Poster, format: Format) {
       width - 2 * pad,
     );
   }
-  const images = await Promise.all(
-    poster.slots.map((a) => loadImage(a!.coverLg || a!.coverMd)),
-  );
+}
+
+function drawGrid(
+  ctx: CanvasRenderingContext2D,
+  poster: Poster,
+  format: Format,
+  images: (HTMLImageElement | null)[],
+  bg: { light: boolean },
+  ink: string,
+  cell: number,
+  gap: number,
+  caption: number,
+  startX: number,
+  startY: number,
+) {
   poster.slots.forEach((album, i) => {
     const a = album!,
       x = startX + (i % 3) * (cell + gap),
@@ -155,6 +144,18 @@ export async function exportPosterPng(poster: Poster, format: Format) {
       );
     }
   });
+}
+
+function drawFooter(
+  ctx: CanvasRenderingContext2D,
+  poster: Poster,
+  format: Format,
+  width: number,
+  height: number,
+  pad: number,
+  footer: number,
+  ink: string,
+) {
   ctx.fillStyle = ink;
   ctx.font = `500 ${format === "story" ? 20 : 26}px Inter, system-ui, sans-serif`;
   ctx.fillText(
@@ -163,6 +164,64 @@ export async function exportPosterPng(poster: Poster, format: Format) {
     height - footer / 2,
     width - 2 * pad,
   );
+}
+
+export async function exportPosterPng(poster: Poster, format: Format) {
+  if (poster.slots.some((a) => !a))
+    throw new Error("Fill every slot before creating a poster.");
+  await document.fonts.ready;
+  const [width, height] = posterDimensions(poster.gridSize, format);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas is not available in this browser.");
+
+  const bg =
+    BACKGROUNDS.find((b) => b.id === poster.background) ?? BACKGROUNDS[0]!;
+  ctx.fillStyle = bg.color;
+  ctx.fillRect(0, 0, width, height);
+
+  const pad = Math.round(width * 0.04),
+    rows = poster.gridSize / 3,
+    gap = Math.round(width * 0.012);
+  const header = format === "story" ? 180 : 200,
+    footer = 80;
+  const caption = poster.showCaptions ? (format === "story" ? 66 : 72) : 0;
+  const cell = Math.floor(
+    Math.min(
+      (width - 2 * pad - 2 * gap) / 3,
+      (height - header - footer - (rows - 1) * gap) / rows - caption,
+    ),
+  );
+
+  const gridWidth = cell * 3 + gap * 2,
+    startX = (width - gridWidth) / 2;
+  const gridHeight = rows * (cell + caption) + (rows - 1) * gap,
+    startY = header + (height - header - footer - gridHeight) / 2;
+  const ink = bg.light ? "#171717" : "#fafafa";
+
+  drawHeader(ctx, poster, format, width, pad, ink);
+
+  const images = await Promise.all(
+    poster.slots.map((a) => loadImage(a!.coverLg || a!.coverMd)),
+  );
+  drawGrid(
+    ctx,
+    poster,
+    format,
+    images,
+    bg,
+    ink,
+    cell,
+    gap,
+    caption,
+    startX,
+    startY,
+  );
+
+  drawFooter(ctx, poster, format, width, height, pad, footer, ink);
+
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, "image/png"),
   );
