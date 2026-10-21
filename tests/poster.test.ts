@@ -6,6 +6,7 @@ import {
   moveSlot,
   isDuplicate,
   posterDimensions,
+  safeCover,
 } from "../client/src/poster";
 const album = {
   deezerId: 43043341,
@@ -146,4 +147,52 @@ it("round-trips a full board with long Unicode album metadata", () => {
     })),
   };
   expect(decodePoster(encodePoster(longBoard))).toEqual(longBoard);
+});
+
+describe("safeCover validation", () => {
+  it("allows valid HTTPS Deezer CDN URLs", () => {
+    expect(safeCover("https://cdn-images.dzcdn.net/images/cover/123/500x500.jpg")).toBe("https://cdn-images.dzcdn.net/images/cover/123/500x500.jpg");
+  });
+
+  it("rejects non-HTTPS protocols", () => {
+    expect(safeCover("http://cdn-images.dzcdn.net/images/cover/123/500x500.jpg")).toBe("");
+    expect(safeCover("ftp://cdn-images.dzcdn.net/images/cover/123/500x500.jpg")).toBe("");
+    expect(safeCover("javascript:alert(1)")).toBe("");
+  });
+
+  it("rejects non-Deezer hostnames", () => {
+    expect(safeCover("https://example.com/image.jpg")).toBe("");
+    expect(safeCover("https://cdn-images.other.net/image.jpg")).toBe("");
+  });
+
+  it("rejects URLs with credentials", () => {
+    expect(safeCover("https://user:pass@cdn-images.dzcdn.net/image.jpg")).toBe("");
+  });
+
+  it("handles valid data URIs when local flag is true", () => {
+    const png = "data:image/png;base64,iVBORw0KGgo=";
+    const jpeg = "data:image/jpeg;base64,/9j/4AAQSkZJRg==";
+    const webp = "data:image/webp;base64,UklGRhoAAABXRUJQVlA=";
+
+    expect(safeCover(png, true)).toBe(png);
+    expect(safeCover(jpeg, true)).toBe(jpeg);
+    expect(safeCover(webp, true)).toBe(webp);
+  });
+
+  it("rejects data URIs when local flag is false", () => {
+    const png = "data:image/png;base64,iVBORw0KGgo=";
+    expect(safeCover(png, false)).toBe("");
+    expect(safeCover(png)).toBe(""); // default is false
+  });
+
+  it("rejects unsupported data URIs and malformed strings", () => {
+    const gif = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    expect(safeCover(gif, true)).toBe("");
+
+    // Invalid base64
+    expect(safeCover("data:image/png;base64,not-base64!", true)).toBe("");
+
+    // Not a valid URL
+    expect(safeCover("just a string")).toBe("");
+  });
 });
