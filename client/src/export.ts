@@ -10,6 +10,7 @@ export function downloadBlob(blob: Blob, name: string) {
     link = document.createElement("a");
   link.href = url;
   link.download = name;
+  link.rel = "noopener noreferrer";
   document.body.append(link);
   link.click();
   link.remove();
