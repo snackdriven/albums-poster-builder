@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import {
   normalizePoster,
   encodePoster,
@@ -6,6 +6,8 @@ import {
   moveSlot,
   isDuplicate,
   posterDimensions,
+  readPoster,
+  STORAGE_KEY,
 } from "../client/src/poster";
 const album = {
   deezerId: 43043341,
@@ -146,4 +148,88 @@ it("round-trips a full board with long Unicode album metadata", () => {
     })),
   };
   expect(decodePoster(encodePoster(longBoard))).toEqual(longBoard);
+});
+
+describe("readPoster", () => {
+  let mockStorage: Record<string, string> = {};
+
+  beforeEach(() => {
+    mockStorage = {};
+    vi.stubGlobal("localStorage", {
+      getItem: vi.fn((key: string) => mockStorage[key] || null),
+      setItem: vi.fn((key: string, value: string) => {
+        mockStorage[key] = value;
+      }),
+    });
+    vi.stubGlobal("location", {
+      hash: "",
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns an empty poster when nothing is saved or shared", () => {
+    const { poster, warning } = readPoster();
+    expect(poster.gridSize).toBe(9);
+    expect(warning).toBeNull();
+  });
+
+  it("reads a saved poster from localStorage", () => {
+    mockStorage[STORAGE_KEY] = JSON.stringify({
+      gridSize: 12,
+      title: "Saved Board",
+    });
+    const { poster, warning } = readPoster();
+    expect(poster.gridSize).toBe(12);
+    expect(poster.title).toBe("Saved Board");
+    expect(warning).toBeNull();
+  });
+
+  it("returns a warning if localStorage access throws an error", () => {
+    vi.stubGlobal("localStorage", {
+      getItem: () => {
+        throw new Error("Access denied");
+      },
+    });
+    const { poster, warning } = readPoster();
+    expect(poster.gridSize).toBe(9);
+    expect(warning).toBe(
+      "Saved board could not be read. Changes will stay here until you back them up.",
+    );
+  });
+
+  it("reads a shared poster from location.hash and overrides saved data", () => {
+    mockStorage[STORAGE_KEY] = JSON.stringify({
+      gridSize: 12,
+      title: "Saved Board",
+    });
+    const sharedBoard = encodePoster({
+      ...board,
+      title: "Shared Board",
+      gridSize: 9,
+    } as any);
+    vi.stubGlobal("location", { hash: `#poster=${sharedBoard}` });
+
+    const { poster, warning } = readPoster();
+    expect(poster.gridSize).toBe(9);
+    expect(poster.title).toBe("Shared Board");
+    expect(warning).toBeNull();
+  });
+
+  it("returns a warning and falls back to saved data if share link is invalid", () => {
+    mockStorage[STORAGE_KEY] = JSON.stringify({
+      gridSize: 12,
+      title: "Saved Board",
+    });
+    vi.stubGlobal("location", { hash: `#poster=invalid-share-link` });
+
+    const { poster, warning } = readPoster();
+    expect(poster.gridSize).toBe(12);
+    expect(poster.title).toBe("Saved Board");
+    expect(warning).toBe(
+      "This share link is invalid. Your saved board is still available.",
+    );
+  });
 });
