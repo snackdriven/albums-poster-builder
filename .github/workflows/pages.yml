@@ -44,4 +44,8 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
+        env:
+          # deploy-pages v5 still bundles a dependency that imports Node's punycode.
+          # Filter only DEP0040 in this action; retain other warnings and failures.
+          NODE_OPTIONS: --disable-warning=DEP0040
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
