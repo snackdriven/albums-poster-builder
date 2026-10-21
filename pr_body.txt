@@ -1,0 +1,8 @@
+🎯 **What:** The testing gap addressed
+This PR adds a test for the `exportPosterPng` function to ensure it correctly throws an error with the message "Fill every slot before creating a poster." when the user tries to export a poster with incomplete slots.
+
+📊 **Coverage:** What scenarios are now tested
+The unit test asserts that when `exportPosterPng` is called with a poster object containing missing (`null`) slots, it rejects the promise and throws the expected error.
+
+✨ **Result:** The improvement in test coverage
+This covers a previously untested validation logic gap at the beginning of the `exportPosterPng` function.
