@@ -64,6 +64,10 @@ describe("portable boards", () => {
     expect(decodePoster("not-a-board")).toBeNull();
     expect(decodePoster(btoa("{}"))).toBeNull();
   });
+  it("returns null when decoding fails due to invalid base64 or JSON", () => {
+    // Pass something that fails atob or JSON.parse
+    expect(decodePoster("z.invalid_base64!")).toBeNull();
+  });
 });
 describe("positional board behavior", () => {
   it("moves by swapping with a neighbor, preserving gaps", () => {
