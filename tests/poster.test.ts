@@ -64,6 +64,42 @@ describe("portable boards", () => {
     expect(decodePoster("not-a-board")).toBeNull();
     expect(decodePoster(btoa("{}"))).toBeNull();
   });
+  it("refuses to encode boards that exceed size limits", () => {
+    const largeBoard = {
+      ...board,
+      gridSize: 15,
+      slots: Array(15).fill({
+        ...album,
+        coverLg: "https://cdn-images.dzcdn.net/" + "A".repeat(5000),
+      }),
+    };
+    expect(() => encodePoster(largeBoard as any)).toThrow(
+      "This board is too large for a share link. Use a JSON backup instead.",
+    );
+
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    const randomStr = (len: number) =>
+      Array.from(
+        { length: len },
+        () => chars[Math.floor(Math.random() * chars.length)],
+      ).join("");
+    const incompressibleBoard = {
+      ...board,
+      gridSize: 15,
+      slots: Array.from({ length: 15 }, (_, i) => ({
+        ...album,
+        deezerId: i,
+        title: randomStr(200),
+        artist: randomStr(200),
+        coverMd: "https://cdn-images.dzcdn.net/" + randomStr(800),
+        coverLg: "https://cdn-images.dzcdn.net/" + randomStr(800),
+      })),
+    };
+    expect(() => encodePoster(incompressibleBoard as any)).toThrow(
+      "This board is too large for a share link. Use a JSON backup instead.",
+    );
+  });
 });
 describe("positional board behavior", () => {
   it("moves by swapping with a neighbor, preserving gaps", () => {
