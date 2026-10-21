@@ -20,3 +20,16 @@ and the Release conventions workflow validates it with Commitizen. Start with
 `perf: optimize fitText using binary search` or `test: cover invalid share data`.
 Allowed types: build, bump, chore, ci, docs, feat, fix, perf, refactor, revert,
 style, test. Put emoji after the prefix if desired, never before it.
+
+Before Jules opens or updates a PR, set its title explicitly in this format.
+Do not use Jules's default leading emoji or bracketed task category as the title
+prefix. Examples:
+
+- `perf: optimize text fitting` (not `⚡ Optimize text fitting`)
+- `refactor: extract poster drawing helpers` (not `🧹 [code health improvement] ...`)
+- `test: cover share link size limits` (not `🧪 Add missing error test ...`)
+- `fix: sandbox Deezer search scripts` (not `🔒 Fix XSS vulnerability ...`)
+
+The Release conventions workflow repairs recognized, same-repository Jules PR
+titles before running Commitizen. This is a fallback; supply a compliant title
+when creating the PR. Keep the generated Jules task attribution in the PR body.
