@@ -7,7 +7,7 @@ describe("exportPosterPng", () => {
     const poster: Poster = {
       gridSize: 9,
       title: "Test",
-      background: "slate",
+      background: "abyss",
       showCaptions: false,
       slots: [
         null, null, null, null, null, null, null, null, null
