@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  emptyPoster,
   normalizePoster,
   encodePoster,
   decodePoster,
@@ -22,6 +23,19 @@ const board = {
   showCaptions: false,
   slots: [album, ...Array(8).fill(null)],
 };
+
+describe("emptyPoster", () => {
+  it("returns a clean, default 3x3 board", () => {
+    expect(emptyPoster()).toEqual({
+      gridSize: 9,
+      title: "",
+      background: "abyss",
+      showCaptions: true,
+      slots: Array(9).fill(null),
+    });
+  });
+});
+
 describe("portable boards", () => {
   it("recovers an empty board from malformed saved data", () => {
     const result = normalizePoster({
