@@ -339,7 +339,7 @@ export function App() {
     previous?: Poster;
   } | null>(null);
   const dragFrom = useRef<number | null>(null);
-  const filled = poster.slots.filter(Boolean).length,
+  const filled = poster.slots.reduce((acc, slot) => (slot ? acc + 1 : acc), 0),
     complete = filled === poster.gridSize;
   const bg = BACKGROUNDS.find((b) => b.id === poster.background)!;
   const selectedAlbum = selected === null ? null : poster.slots[selected];
