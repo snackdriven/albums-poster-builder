@@ -121,25 +121,33 @@ export function encodePoster(poster: Poster): string {
   return encoded;
 }
 
+function decodeCompressed(encoded: string): any {
+  const bytes = Uint8Array.from(
+    atob(encoded.slice(2).replace(/-/g, "+").replace(/_/g, "/")),
+    (c) => c.charCodeAt(0),
+  );
+  return JSON.parse(
+    new TextDecoder("utf-8", { fatal: true }).decode(
+      inflateSync(bytes, { out: new Uint8Array(65536) }),
+    ),
+  );
+}
+
+function decodeUncompressed(encoded: string): any {
+  const bytes = Uint8Array.from(
+    atob(encoded.replace(/-/g, "+").replace(/_/g, "/")),
+    (c) => c.charCodeAt(0),
+  );
+  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+}
+
 export function decodePoster(encoded: string): Poster | null {
   if (!encoded || encoded.length > (encoded.startsWith("z.") ? 16000 : 65536))
     return null;
   try {
-    const bytes = Uint8Array.from(
-      atob(
-        (encoded.startsWith("z.") ? encoded.slice(2) : encoded)
-          .replace(/-/g, "+")
-          .replace(/_/g, "/"),
-      ),
-      (c) => c.charCodeAt(0),
-    );
-    const raw = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(
-        encoded.startsWith("z.")
-          ? inflateSync(bytes, { out: new Uint8Array(65536) })
-          : bytes,
-      ),
-    );
+    const raw = encoded.startsWith("z.")
+      ? decodeCompressed(encoded)
+      : decodeUncompressed(encoded);
     if (
       raw.v !== 1 ||
       !GRID_SIZES.includes(raw.g) ||
