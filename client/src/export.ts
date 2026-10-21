@@ -49,10 +49,19 @@ function fitText(
   max: number,
 ): string {
   if (ctx.measureText(text).width <= max) return text;
-  let end = text.length;
-  while (end > 0 && ctx.measureText(text.slice(0, end) + "…").width > max)
-    end--;
-  return text.slice(0, end) + "…";
+  let low = 0;
+  let high = text.length;
+  let best = 0;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    if (ctx.measureText(text.slice(0, mid) + "…").width <= max) {
+      best = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  return text.slice(0, best) + "…";
 }
 export async function exportPosterPng(poster: Poster, format: Format) {
   if (poster.slots.some((a) => !a))
