@@ -67,7 +67,7 @@ export function searchAlbums(
         seen = new Set<number>();
       for (const item of (payload as { data: unknown[] }).data) {
         if (!item || typeof item !== "object") continue;
-        const a = item as Record<string, any>;
+        const a = item as Record<string, unknown>;
         const coverMd = safeCover(
           typeof a.cover_big === "string" ? a.cover_big : "",
         );
@@ -75,6 +75,7 @@ export function searchAlbums(
           typeof a.cover_xl === "string" ? a.cover_xl : coverMd,
         );
         if (
+          typeof a.id !== "number" ||
           !Number.isInteger(a.id) ||
           typeof a.title !== "string" ||
           !a.title ||
@@ -87,7 +88,10 @@ export function searchAlbums(
           deezerId: a.id,
           title: a.title.slice(0, 200),
           artist:
-            typeof a.artist?.name === "string"
+            a.artist &&
+            typeof a.artist === "object" &&
+            "name" in a.artist &&
+            typeof a.artist.name === "string"
               ? a.artist.name.slice(0, 200)
               : "",
           year: null,
@@ -115,7 +119,7 @@ export function searchAlbums(
       s.src = "${url}";
       s.onerror = function() { window.parent.postMessage({ type: "error" }, "*"); };
       document.head.append(s);
-    <\/script>`;
+    </script>`;
 
     document.body.append(iframe);
   });

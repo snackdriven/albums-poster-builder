@@ -121,7 +121,7 @@ export function encodePoster(poster: Poster): string {
   return encoded;
 }
 
-function decodeCompressed(encoded: string): any {
+function decodeCompressed(encoded: string): unknown {
   const bytes = Uint8Array.from(
     atob(encoded.slice(2).replace(/-/g, "+").replace(/_/g, "/")),
     (c) => c.charCodeAt(0),
@@ -133,7 +133,7 @@ function decodeCompressed(encoded: string): any {
   );
 }
 
-function decodeUncompressed(encoded: string): any {
+function decodeUncompressed(encoded: string): unknown {
   const bytes = Uint8Array.from(
     atob(encoded.replace(/-/g, "+").replace(/_/g, "/")),
     (c) => c.charCodeAt(0),
@@ -149,8 +149,16 @@ export function decodePoster(encoded: string): Poster | null {
       ? decodeCompressed(encoded)
       : decodeUncompressed(encoded);
     if (
+      !raw ||
+      typeof raw !== "object" ||
+      !("v" in raw) ||
+      !("g" in raw) ||
+      !("a" in raw) ||
+      !("n" in raw) ||
+      !("b" in raw) ||
+      !("c" in raw) ||
       raw.v !== 1 ||
-      !GRID_SIZES.includes(raw.g) ||
+      !GRID_SIZES.some((size) => size === raw.g) ||
       !Array.isArray(raw.a) ||
       raw.a.length !== raw.g ||
       typeof raw.n !== "string" ||
