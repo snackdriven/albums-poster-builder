@@ -90,7 +90,7 @@ describe("portable boards", () => {
         coverLg: "https://cdn-images.dzcdn.net/" + "A".repeat(5000),
       }),
     };
-    expect(() => encodePoster(largeBoard as any)).toThrow(
+    expect(() => encodePoster(largeBoard)).toThrow(
       "This board is too large for a share link. Use a JSON backup instead.",
     );
 
@@ -115,7 +115,7 @@ describe("portable boards", () => {
         coverLg: "https://cdn-images.dzcdn.net/" + randomStr(800),
       })),
     };
-    expect(() => encodePoster(incompressibleBoard as any)).toThrow(
+    expect(() => encodePoster(incompressibleBoard)).toThrow(
       "This board is too large for a share link. Use a JSON backup instead.",
     );
   });
@@ -272,7 +272,7 @@ describe("readPoster", () => {
       ...board,
       title: "Shared Board",
       gridSize: 9,
-    } as any);
+    });
     vi.stubGlobal("location", { hash: `#poster=${sharedBoard}` });
 
     const { poster, warning } = readPoster();

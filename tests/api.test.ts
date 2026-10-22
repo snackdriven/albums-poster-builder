@@ -2,25 +2,18 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { searchAlbums } from "../client/src/api";
 
 describe("searchAlbums", () => {
-  let originalCrypto: any;
-
   beforeEach(() => {
     vi.useFakeTimers();
 
     // Mock global objects needed by searchAlbums
-    global.window = {
+    vi.stubGlobal("window", {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
-    } as any;
-
-    originalCrypto = global.crypto;
-    Object.defineProperty(global, 'crypto', {
-      value: { randomUUID: () => "test-uuid" },
-      writable: true,
-      configurable: true
     });
 
-    global.document = {
+    vi.stubGlobal("crypto", { randomUUID: () => "test-uuid" });
+
+    vi.stubGlobal("document", {
       createElement: vi.fn().mockImplementation((tag) => {
         if (tag === 'iframe') {
           return {
@@ -33,22 +26,14 @@ describe("searchAlbums", () => {
       }),
       head: { append: vi.fn() },
       body: { append: vi.fn() }
-    } as any;
+    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
 
-    Object.defineProperty(global, 'crypto', {
-      value: originalCrypto,
-      writable: true,
-      configurable: true
-    });
-    // @ts-ignore
-    delete global.window;
-    // @ts-ignore
-    delete global.document;
+    vi.unstubAllGlobals();
   });
 
   it("times out if no response is received within 12 seconds", async () => {

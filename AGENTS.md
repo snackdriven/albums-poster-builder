@@ -33,3 +33,9 @@ prefix. Examples:
 The Release conventions workflow repairs recognized, same-repository Jules PR
 titles before running Commitizen. This is a fallback; supply a compliant title
 when creating the PR. Keep the generated Jules task attribution in the PR body.
+
+## Linting
+
+Run `npm ci` at the repository root, then `npm run lint` before opening a PR.
+The lint check fails on warnings as well as errors; `npm run lint:fix` applies
+safe automatic fixes. Keep generated output out of lint inputs.

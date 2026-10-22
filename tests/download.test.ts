@@ -44,9 +44,9 @@ describe('downloadBlob', () => {
 
     const mockCreateElement = vi.fn((tagName) => {
       if (tagName === 'a') {
-        return mockLink as any as HTMLAnchorElement;
+        return mockLink;
       }
-      return {} as any;
+      return {};
     });
 
     const mockAppend = vi.fn();
