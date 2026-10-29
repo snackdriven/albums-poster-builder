@@ -41,6 +41,9 @@ export function emptyPoster(): Poster {
   };
 }
 export function safeCover(value: string, local = false): string {
+  if (!value) return "";
+  const v = value.toLowerCase();
+  if (!v.includes("https://") && !v.includes("data:")) return "";
   if (
     local &&
     /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value)
