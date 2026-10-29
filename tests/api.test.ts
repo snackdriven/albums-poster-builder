@@ -12,6 +12,7 @@ describe("searchAlbums", () => {
 
     // Mock global objects needed by searchAlbums
     vi.stubGlobal("window", {
+      origin: "https://albums.example.test",
       location: { origin: "https://albums.example.test" },
       addEventListener: vi.fn().mockImplementation((event, handler) => {
         if (event === "message") messageHandler = handler;
@@ -59,6 +60,7 @@ describe("searchAlbums", () => {
     expect(messageHandler).toBeDefined();
     messageHandler!({
       source: mockContentWindow,
+      origin: "null",
       data: { type: "error" },
     });
 
@@ -71,6 +73,7 @@ describe("searchAlbums", () => {
     expect(messageHandler).toBeDefined();
     messageHandler!({
       source: mockContentWindow,
+      origin: "null",
       data: { invalid: "data" },
     });
 
@@ -92,5 +95,21 @@ describe("searchAlbums", () => {
     controller.abort();
 
     await expect(searchPromise).rejects.toThrow("Search cancelled");
+  });
+
+  it("ignores a foreign origin even when the iframe WindowProxy matches", async () => {
+    const searchPromise = searchAlbums("test query");
+    const rejection = expect(searchPromise).rejects.toThrow("Search timed out");
+    messageHandler!({ source: mockContentWindow, origin: "https://untrusted.example", data: { type: "error" } });
+    vi.advanceTimersByTime(12000);
+    await rejection;
+  });
+
+  it("ignores a forged source even with an opaque origin", async () => {
+    const searchPromise = searchAlbums("test query");
+    const rejection = expect(searchPromise).rejects.toThrow("Search timed out");
+    messageHandler!({ source: {} as Window, origin: "null", data: { type: "error" } });
+    vi.advanceTimersByTime(12000);
+    await rejection;
   });
 });

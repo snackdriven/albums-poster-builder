@@ -38,6 +38,7 @@ export function searchAlbums(
 
     const onMessage = (event: MessageEvent) => {
       if (event.source !== iframe.contentWindow) return;
+      if (event.origin !== "null" && event.origin !== window.origin) return;
       const payload = event.data;
 
       if (payload && payload.type === "error") {
