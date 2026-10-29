@@ -6,6 +6,7 @@ import {
   GRID_SIZES,
   STORAGE_KEY,
   encodePoster,
+  isDuplicate,
   moveSlot,
   normalizePoster,
   readPoster,
@@ -128,7 +129,7 @@ function SearchSheet({
     const existingIds = new Set<number>();
     const existingKeys = new Set<string>();
     const key = (a: Album) =>
-      `${a.title.trim().toLocaleLowerCase()}\u0000${a.artist.trim().toLocaleLowerCase()}`;
+      `${(a.title || "").trim().toLocaleLowerCase()}\u0000${(a.artist || "").trim().toLocaleLowerCase()}`;
     for (let i = 0; i < poster.slots.length; i++) {
       const a = poster.slots[i];
       if (a && i !== slot) {
