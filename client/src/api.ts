@@ -38,6 +38,7 @@ export function searchAlbums(
 
     const onMessage = (event: MessageEvent) => {
       if (event.source !== iframe.contentWindow) return;
+      if (event.origin !== "null" && event.origin !== window.origin) return;
       const payload = event.data;
 
       if (payload && payload.type === "error") {
@@ -113,11 +114,11 @@ export function searchAlbums(
     const url = `https://api.deezer.com/search/album?q=${encodeURIComponent(query.trim().slice(0, 120))}&limit=24&output=jsonp&callback=${callback}`;
     iframe.srcdoc = `<script>
       window["${callback}"] = function(data) {
-        window.parent.postMessage(data, "*");
+        window.parent.postMessage(data, "${window.location.origin}");
       };
       const s = document.createElement("script");
       s.src = "${url}";
-      s.onerror = function() { window.parent.postMessage({ type: "error" }, "*"); };
+      s.onerror = function() { window.parent.postMessage({ type: "error" }, "${window.location.origin}"); };
       document.head.append(s);
     </script>`;
 

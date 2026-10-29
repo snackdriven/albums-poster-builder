@@ -42,14 +42,14 @@ export function emptyPoster(): Poster {
 }
 export function safeCover(value: string, local = false): string {
   if (!value) return "";
-  const v = value.toLowerCase();
-  if (!v.includes("https://") && !v.includes("data:")) return "";
   if (
     local &&
     /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value)
   )
     return value;
   try {
+    // Use the URL parser's own normalization rules; older browsers retain the fallback.
+    if (typeof URL.canParse === "function" && !URL.canParse(value)) return "";
     const url = new URL(value);
     return url.protocol === "https:" &&
       url.hostname === "cdn-images.dzcdn.net" &&
@@ -111,9 +111,14 @@ export function encodePoster(poster: Poster): string {
     throw new Error(
       "This board is too large for a share link. Use a JSON backup instead.",
     );
+  const compressed = deflateSync(bytes);
+  let str = "";
+  for (let i = 0; i < compressed.length; i++) {
+    str += String.fromCharCode(compressed[i]);
+  }
   const encoded =
     "z." +
-    btoa(String.fromCharCode(...deflateSync(bytes)))
+    btoa(str)
       .replace(/\+/g, "-")
       .replace(/\//g, "_")
       .replace(/=+$/g, "");
@@ -133,7 +138,7 @@ function decodeCompressed(encoded: string): unknown {
     new TextDecoder("utf-8", { fatal: true }).decode(
       inflateSync(bytes, { out: new Uint8Array(65536) }),
     ),
-  );
+  ) as unknown;
 }
 
 function decodeUncompressed(encoded: string): unknown {
@@ -141,7 +146,7 @@ function decodeUncompressed(encoded: string): unknown {
     atob(encoded.replace(/-/g, "+").replace(/_/g, "/")),
     (c) => c.charCodeAt(0),
   );
-  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
 }
 
 export function decodePoster(encoded: string): Poster | null {
