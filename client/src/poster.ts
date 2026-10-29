@@ -135,7 +135,7 @@ function decodeCompressed(encoded: string): unknown {
     new TextDecoder("utf-8", { fatal: true }).decode(
       inflateSync(bytes, { out: new Uint8Array(65536) }),
     ),
-  );
+  ) as unknown;
 }
 
 function decodeUncompressed(encoded: string): unknown {
@@ -143,7 +143,7 @@ function decodeUncompressed(encoded: string): unknown {
     atob(encoded.replace(/-/g, "+").replace(/_/g, "/")),
     (c) => c.charCodeAt(0),
   );
-  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
 }
 
 export function decodePoster(encoded: string): Poster | null {
