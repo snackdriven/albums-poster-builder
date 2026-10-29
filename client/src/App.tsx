@@ -102,35 +102,23 @@ function Dialog({
   );
 }
 
-function SearchSheet({
+function ManualForm({
   slot,
   poster,
   onPick,
-  onClose,
+  onBack,
 }: {
   slot: number;
   poster: Poster;
   onPick: (album: Album) => void;
-  onClose: () => void;
+  onBack: () => void;
 }) {
-  const [input, setInput] = useState(""),
-    [query, setQuery] = useState(""),
-    [manual, setManual] = useState(false);
-  const [title, setTitle] = useState(""),
-    [artist, setArtist] = useState(""),
-    [cover, setCover] = useState("");
-  const [error, setError] = useState<string | null>(null),
-    [uploading, setUploading] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setQuery(input.trim()), 350);
-    return () => clearTimeout(timer);
-  }, [input]);
-  const search = useQuery({
-    queryKey: ["album-search", query],
-    queryFn: ({ signal }) => searchAlbums(query, signal),
-    enabled: query.length >= 2 && !manual,
-    staleTime: 60000,
-  });
+  const [title, setTitle] = useState("");
+  const [artist, setArtist] = useState("");
+  const [cover, setCover] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
   async function upload(file?: File) {
     if (!file) {
       setCover("");
@@ -147,6 +135,7 @@ function SearchSheet({
       setUploading(false);
     }
   }
+
   function addManual(event: React.FormEvent) {
     event.preventDefault();
     const album: Album = {
@@ -167,65 +156,180 @@ function SearchSheet({
     }
     onPick(album);
   }
+
+  return (
+    <form onSubmit={addManual} className="space-y-3 mt-4">
+      <label className="field">
+        Album title
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+          maxLength={200}
+        />
+      </label>
+      <label className="field">
+        Artist
+        <input
+          value={artist}
+          onChange={(e) => setArtist(e.target.value)}
+          required
+          maxLength={200}
+        />
+      </label>
+      <label className="field">
+        Cover image (optional)
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={(e) => void upload(e.target.files?.[0])}
+        />
+      </label>
+      <p className="muted text-sm">
+        Uploaded covers stay on this device. Shared links include the album
+        details without the uploaded image.
+      </p>
+      {cover && (
+        <img
+          src={cover}
+          alt="Uploaded cover preview"
+          className="h-24 w-24 rounded-lg"
+        />
+      )}
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <button className="primary" disabled={uploading} type="submit">
+          {uploading ? "Reading cover…" : "Add album"}
+        </button>
+        <button className="secondary" type="button" onClick={onBack}>
+          Back to search
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function SearchResults({
+  query,
+  slot,
+  poster,
+  onPick,
+}: {
+  query: string;
+  slot: number;
+  poster: Poster;
+  onPick: (album: Album) => void;
+}) {
+  const search = useQuery({
+    queryKey: ["album-search", query],
+    queryFn: ({ signal }) => searchAlbums(query, signal),
+    enabled: query.length >= 2,
+    staleTime: 60000,
+  });
+
+  return (
+    <div className="search-results">
+      {query.length < 2 && (
+        <p className="muted py-8 text-center">
+          Start typing to search albums.
+        </p>
+      )}
+      {query.length >= 2 && search.isPending && (
+        <p role="status" className="muted py-8 text-center">
+          Searching…
+        </p>
+      )}
+      {search.isError && (
+        <div className="py-4">
+          <p role="alert" className="error">
+            {search.error.message}
+          </p>
+          <button
+            className="secondary mt-2"
+            onClick={() => void search.refetch()}
+          >
+            Try search again
+          </button>
+        </div>
+      )}
+      {search.isSuccess && query.length >= 2 && search.data.length === 0 && (
+        <p className="muted py-8 text-center">
+          No albums found. Try the artist name or add it manually.
+        </p>
+      )}
+      {query.length >= 2 && (
+        <ul className="grid grid-cols-3 gap-3 py-4">
+          {(search.data ?? []).map((album) => {
+            const picked = isDuplicate(poster.slots, album, slot);
+            return (
+              <li key={album.deezerId}>
+                <button
+                  type="button"
+                  className="result"
+                  disabled={picked}
+                  onClick={() => onPick(album)}
+                  aria-label={`Pick ${album.title} by ${album.artist} for slot ${slot + 1}`}
+                >
+                  <img
+                    src={album.coverMd}
+                    alt=""
+                    loading="lazy"
+                    className="aspect-square w-full rounded-lg object-cover"
+                  />
+                  <span className="block truncate font-semibold mt-1 text-xs">
+                    {album.title}
+                  </span>
+                  <span className="block truncate muted text-xs">
+                    {album.artist}
+                  </span>
+                  {picked && (
+                    <span className="text-xs text-blue-300">
+                      On your board
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function SearchSheet({
+  slot,
+  poster,
+  onPick,
+  onClose,
+}: {
+  slot: number;
+  poster: Poster;
+  onPick: (album: Album) => void;
+  onClose: () => void;
+}) {
+  const [input, setInput] = useState("");
+  const [query, setQuery] = useState("");
+  const [manual, setManual] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(input.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [input]);
+
   return (
     <Dialog title={`#${slot + 1} — find an album`} onClose={onClose}>
       {manual ? (
-        <form onSubmit={addManual} className="space-y-3 mt-4">
-          <label className="field">
-            Album title
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              maxLength={200}
-            />
-          </label>
-          <label className="field">
-            Artist
-            <input
-              value={artist}
-              onChange={(e) => setArtist(e.target.value)}
-              required
-              maxLength={200}
-            />
-          </label>
-          <label className="field">
-            Cover image (optional)
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(e) => void upload(e.target.files?.[0])}
-            />
-          </label>
-          <p className="muted text-sm">
-            Uploaded covers stay on this device. Shared links include the album
-            details without the uploaded image.
-          </p>
-          {cover && (
-            <img
-              src={cover}
-              alt="Uploaded cover preview"
-              className="h-24 w-24 rounded-lg"
-            />
-          )}
-          {error && (
-            <p role="alert" className="error">
-              {error}
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button className="primary" disabled={uploading} type="submit">
-              {uploading ? "Reading cover…" : "Add album"}
-            </button>
-            <button
-              className="secondary"
-              type="button"
-              onClick={() => setManual(false)}
-            >
-              Back to search
-            </button>
-          </div>
-        </form>
+        <ManualForm
+          slot={slot}
+          poster={poster}
+          onPick={onPick}
+          onBack={() => setManual(false)}
+        />
       ) : (
         <>
           <label className="field mt-4">
@@ -238,74 +342,12 @@ function SearchSheet({
               placeholder="Album or artist — e.g. Crisis"
             />
           </label>
-          <div className="search-results">
-            {query.length < 2 && (
-              <p className="muted py-8 text-center">
-                Start typing to search albums.
-              </p>
-            )}
-            {query.length >= 2 && search.isPending && (
-              <p role="status" className="muted py-8 text-center">
-                Searching…
-              </p>
-            )}
-            {search.isError && (
-              <div className="py-4">
-                <p role="alert" className="error">
-                  {search.error.message}
-                </p>
-                <button
-                  className="secondary mt-2"
-                  onClick={() => void search.refetch()}
-                >
-                  Try search again
-                </button>
-              </div>
-            )}
-            {search.isSuccess &&
-              query.length >= 2 &&
-              search.data.length === 0 && (
-                <p className="muted py-8 text-center">
-                  No albums found. Try the artist name or add it manually.
-                </p>
-              )}
-            {query.length >= 2 && (
-              <ul className="grid grid-cols-3 gap-3 py-4">
-                {(search.data ?? []).map((album) => {
-                  const picked = isDuplicate(poster.slots, album, slot);
-                  return (
-                    <li key={album.deezerId}>
-                      <button
-                        type="button"
-                        className="result"
-                        disabled={picked}
-                        onClick={() => onPick(album)}
-                        aria-label={`Pick ${album.title} by ${album.artist} for slot ${slot + 1}`}
-                      >
-                        <img
-                          src={album.coverMd}
-                          alt=""
-                          loading="lazy"
-                          className="aspect-square w-full rounded-lg object-cover"
-                        />
-                        <span className="block truncate font-semibold mt-1 text-xs">
-                          {album.title}
-                        </span>
-                        <span className="block truncate muted text-xs">
-                          {album.artist}
-                        </span>
-                        {picked && (
-                          <span className="text-xs text-blue-300">
-                            On your board
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+          <SearchResults
+            query={query}
+            slot={slot}
+            poster={poster}
+            onPick={onPick}
+          />
           <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-3">
             <span className="muted text-sm">Didn't find your album?</span>
             <button
