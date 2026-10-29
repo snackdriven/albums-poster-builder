@@ -141,8 +141,10 @@ function SearchSheet({
   const isPicked = (album: Album) =>
     existingIds.has(album.deezerId) ||
     existingKeys.has(
-      `${album.title.trim().toLocaleLowerCase()}\u0000${album.artist.trim().toLocaleLowerCase()}`,
+      `${(album.title || "").trim().toLocaleLowerCase()}\u0000${(album.artist || "").trim().toLocaleLowerCase()}`,
     );
+
+
   const search = useQuery({
     queryKey: ["album-search", query],
     queryFn: ({ signal }) => searchAlbums(query, signal),
