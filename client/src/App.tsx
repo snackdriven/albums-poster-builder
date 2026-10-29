@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useEffect, useRef, useState, type ReactNode } from "react";
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { searchAlbums } from "./api";
 import {
   BACKGROUNDS,
@@ -103,60 +103,28 @@ function Dialog({
 }
 
 function ManualForm({
-  slot,
-  poster,
-  onPick,
+  title,
+  artist,
+  cover,
+  error,
+  uploading,
+  setTitle,
+  setArtist,
+  upload,
+  addManual,
   onBack,
 }: {
-  slot: number;
-  poster: Poster;
-  onPick: (album: Album) => void;
+  title: string;
+  artist: string;
+  cover: string;
+  error: string | null;
+  uploading: boolean;
+  setTitle: (value: string) => void;
+  setArtist: (value: string) => void;
+  upload: (file?: File) => Promise<void>;
+  addManual: (event: React.FormEvent) => void;
   onBack: () => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [artist, setArtist] = useState("");
-  const [cover, setCover] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-
-  async function upload(file?: File) {
-    if (!file) {
-      setCover("");
-      return;
-    }
-    setUploading(true);
-    setError(null);
-    try {
-      setCover(await readCover(file));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Image could not be read.");
-      setCover("");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  function addManual(event: React.FormEvent) {
-    event.preventDefault();
-    const album: Album = {
-      deezerId: -Date.now(),
-      title: title.trim(),
-      artist: artist.trim(),
-      year: null,
-      coverMd: cover,
-      coverLg: cover,
-    };
-    if (!album.title || !album.artist) {
-      setError("Enter an album title and artist.");
-      return;
-    }
-    if (isDuplicate(poster.slots, album, slot)) {
-      setError("This album is already on your board.");
-      return;
-    }
-    onPick(album);
-  }
-
   return (
     <form onSubmit={addManual} className="space-y-3 mt-4">
       <label className="field">
@@ -215,28 +183,21 @@ function ManualForm({
 
 function SearchResults({
   query,
+  search,
   slot,
-  poster,
+  isPicked,
   onPick,
 }: {
   query: string;
+  search: UseQueryResult<Album[], Error>;
   slot: number;
-  poster: Poster;
+  isPicked: (album: Album) => boolean;
   onPick: (album: Album) => void;
 }) {
-  const search = useQuery({
-    queryKey: ["album-search", query],
-    queryFn: ({ signal }) => searchAlbums(query, signal),
-    enabled: query.length >= 2,
-    staleTime: 60000,
-  });
-
   return (
     <div className="search-results">
       {query.length < 2 && (
-        <p className="muted py-8 text-center">
-          Start typing to search albums.
-        </p>
+        <p className="muted py-8 text-center">Start typing to search albums.</p>
       )}
       {query.length >= 2 && search.isPending && (
         <p role="status" className="muted py-8 text-center">
@@ -264,7 +225,7 @@ function SearchResults({
       {query.length >= 2 && (
         <ul className="grid grid-cols-3 gap-3 py-4">
           {(search.data ?? []).map((album) => {
-            const picked = isDuplicate(poster.slots, album, slot);
+            const picked = isPicked(album);
             return (
               <li key={album.deezerId}>
                 <button
@@ -287,9 +248,7 @@ function SearchResults({
                     {album.artist}
                   </span>
                   {picked && (
-                    <span className="text-xs text-blue-300">
-                      On your board
-                    </span>
+                    <span className="text-xs text-blue-300">On your board</span>
                   )}
                 </button>
               </li>
@@ -312,22 +271,93 @@ function SearchSheet({
   onPick: (album: Album) => void;
   onClose: () => void;
 }) {
-  const [input, setInput] = useState("");
-  const [query, setQuery] = useState("");
-  const [manual, setManual] = useState(false);
-
+  const [input, setInput] = useState(""),
+    [query, setQuery] = useState(""),
+    [manual, setManual] = useState(false);
+  const [title, setTitle] = useState(""),
+    [artist, setArtist] = useState(""),
+    [cover, setCover] = useState("");
+  const [error, setError] = useState<string | null>(null),
+    [uploading, setUploading] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setQuery(input.trim()), 350);
     return () => clearTimeout(timer);
   }, [input]);
+  const { existingIds, existingKeys } = useMemo(() => {
+    const existingIds = new Set<number>();
+    const existingKeys = new Set<string>();
+    const key = (a: Album) =>
+      `${(a.title || "").trim().toLocaleLowerCase()}\u0000${(a.artist || "").trim().toLocaleLowerCase()}`;
+    for (let i = 0; i < poster.slots.length; i++) {
+      const a = poster.slots[i];
+      if (a && i !== slot) {
+        existingIds.add(a.deezerId);
+        existingKeys.add(key(a));
+      }
+    }
+    return { existingIds, existingKeys };
+  }, [poster.slots, slot]);
+  const isPicked = (album: Album) =>
+    existingIds.has(album.deezerId) ||
+    existingKeys.has(
+      `${(album.title || "").trim().toLocaleLowerCase()}\u0000${(album.artist || "").trim().toLocaleLowerCase()}`,
+    );
 
+  const search = useQuery({
+    queryKey: ["album-search", query],
+    queryFn: ({ signal }) => searchAlbums(query, signal),
+    enabled: query.length >= 2 && !manual,
+    staleTime: 60000,
+  });
+  async function upload(file?: File) {
+    if (!file) {
+      setCover("");
+      return;
+    }
+    setUploading(true);
+    setError(null);
+    try {
+      setCover(await readCover(file));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Image could not be read.");
+      setCover("");
+    } finally {
+      setUploading(false);
+    }
+  }
+  function addManual(event: React.FormEvent) {
+    event.preventDefault();
+    const album: Album = {
+      deezerId: -Date.now(),
+      title: title.trim(),
+      artist: artist.trim(),
+      year: null,
+      coverMd: cover,
+      coverLg: cover,
+    };
+    if (!album.title || !album.artist) {
+      setError("Enter an album title and artist.");
+      return;
+    }
+    if (isPicked(album)) {
+      setError("This album is already on your board.");
+      return;
+    }
+    onPick(album);
+  }
   return (
     <Dialog title={`#${slot + 1} — find an album`} onClose={onClose}>
       {manual ? (
         <ManualForm
-          slot={slot}
-          poster={poster}
-          onPick={onPick}
+          title={title}
+          artist={artist}
+          cover={cover}
+          error={error}
+          uploading={uploading}
+          setTitle={setTitle}
+          setArtist={setArtist}
+          upload={upload}
+          addManual={addManual}
           onBack={() => setManual(false)}
         />
       ) : (
@@ -344,8 +374,9 @@ function SearchSheet({
           </label>
           <SearchResults
             query={query}
+            search={search}
             slot={slot}
-            poster={poster}
+            isPicked={isPicked}
             onPick={onPick}
           />
           <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-3">
