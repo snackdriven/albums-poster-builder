@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { readCover } from "../client/src/export";
 
 describe("readCover validations", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
   it("rejects non-image file types", async () => {
     const file = new File(["content"], "document.pdf", {
       type: "application/pdf",
