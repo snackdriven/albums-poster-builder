@@ -42,8 +42,8 @@ describe("readCover validations", () => {
     class MockImage {
       naturalWidth = 800;
       naturalHeight = 600;
-      onload: any = null;
-      onerror: any = null;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
       crossOrigin = "";
       _src = "";
 
@@ -75,7 +75,7 @@ describe("readCover validations", () => {
       toDataURL: mockToDataURL,
     };
     const mockCreateElement = vi.fn((tagName) => {
-      if (tagName === "canvas") return mockCanvas as any;
+      if (tagName === "canvas") return mockCanvas as unknown as HTMLCanvasElement;
       return {};
     });
     vi.stubGlobal("document", {
