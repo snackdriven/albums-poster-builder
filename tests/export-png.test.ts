@@ -4,6 +4,7 @@ import type { Poster } from "../client/src/poster";
 
 describe("exportPosterPng", () => {
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
