@@ -6,7 +6,7 @@ describe("searchAlbums", () => {
     vi.useFakeTimers();
 
     // Mock global objects needed by searchAlbums
-    vi.stubGlobal("window", {
+    vi.stubGlobal("window", { location: { origin: "http://localhost:3000" },
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     });
