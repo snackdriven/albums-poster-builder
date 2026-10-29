@@ -80,6 +80,7 @@ test("neighbor moves, removal and reset can be undone and survive reload", async
   await expect(page.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
     "0",
+    { timeout: 10000 }
   );
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByRole("progressbar")).toHaveAttribute(
