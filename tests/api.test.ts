@@ -2,12 +2,12 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { searchAlbums } from "../client/src/api";
 
 describe("searchAlbums", () => {
-  let messageHandler: ((event: any) => void) | undefined;
-  let mockContentWindow: any;
+  let messageHandler: ((event: MessageEvent) => void) | undefined;
+  let mockContentWindow: Window;
 
   beforeEach(() => {
     messageHandler = undefined;
-    mockContentWindow = {};
+    mockContentWindow = {} as Window;
     vi.useFakeTimers();
 
     // Mock global objects needed by searchAlbums
