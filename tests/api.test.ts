@@ -80,6 +80,23 @@ describe("searchAlbums", () => {
     await expect(searchPromise).rejects.toThrow("Album search is unavailable. Try again or add it manually.");
   });
 
+  it("aborts immediately if the signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const searchPromise = searchAlbums("test query", controller.signal);
+    await expect(searchPromise).rejects.toThrow("Search cancelled");
+  });
+
+  it("aborts when the signal is triggered", async () => {
+    const controller = new AbortController();
+
+    const searchPromise = searchAlbums("test query", controller.signal);
+    controller.abort();
+
+    await expect(searchPromise).rejects.toThrow("Search cancelled");
+  });
+
   it("ignores a foreign origin even when the iframe WindowProxy matches", async () => {
     const searchPromise = searchAlbums("test query");
     const rejection = expect(searchPromise).rejects.toThrow("Search timed out");
