@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useMemo, useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { searchAlbums } from "./api";
 import {
@@ -6,7 +6,6 @@ import {
   GRID_SIZES,
   STORAGE_KEY,
   encodePoster,
-  isDuplicate,
   moveSlot,
   normalizePoster,
   readPoster,
@@ -125,6 +124,25 @@ function SearchSheet({
     const timer = setTimeout(() => setQuery(input.trim()), 350);
     return () => clearTimeout(timer);
   }, [input]);
+  const { existingIds, existingKeys } = useMemo(() => {
+    const existingIds = new Set<number>();
+    const existingKeys = new Set<string>();
+    const key = (a: Album) =>
+      `${a.title.trim().toLocaleLowerCase()}\u0000${a.artist.trim().toLocaleLowerCase()}`;
+    for (let i = 0; i < poster.slots.length; i++) {
+      const a = poster.slots[i];
+      if (a && i !== slot) {
+        existingIds.add(a.deezerId);
+        existingKeys.add(key(a));
+      }
+    }
+    return { existingIds, existingKeys };
+  }, [poster.slots, slot]);
+  const isPicked = (album: Album) =>
+    existingIds.has(album.deezerId) ||
+    existingKeys.has(
+      `${album.title.trim().toLocaleLowerCase()}\u0000${album.artist.trim().toLocaleLowerCase()}`,
+    );
   const search = useQuery({
     queryKey: ["album-search", query],
     queryFn: ({ signal }) => searchAlbums(query, signal),
@@ -161,7 +179,7 @@ function SearchSheet({
       setError("Enter an album title and artist.");
       return;
     }
-    if (isDuplicate(poster.slots, album, slot)) {
+    if (isPicked(album)) {
       setError("This album is already on your board.");
       return;
     }
@@ -272,7 +290,7 @@ function SearchSheet({
             {query.length >= 2 && (
               <ul className="grid grid-cols-3 gap-3 py-4">
                 {(search.data ?? []).map((album) => {
-                  const picked = isDuplicate(poster.slots, album, slot);
+                  const picked = isPicked(album);
                   return (
                     <li key={album.deezerId}>
                       <button
