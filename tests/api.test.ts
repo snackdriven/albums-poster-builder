@@ -44,4 +44,21 @@ describe("searchAlbums", () => {
 
     await catchPromise;
   });
+
+  it("aborts immediately if the signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const searchPromise = searchAlbums("test query", controller.signal);
+    await expect(searchPromise).rejects.toThrow("Search cancelled");
+  });
+
+  it("aborts when the signal is triggered", async () => {
+    const controller = new AbortController();
+
+    const searchPromise = searchAlbums("test query", controller.signal);
+    controller.abort();
+
+    await expect(searchPromise).rejects.toThrow("Search cancelled");
+  });
 });
