@@ -2,12 +2,19 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { searchAlbums } from "../client/src/api";
 
 describe("searchAlbums", () => {
+  let messageHandler: ((event: MessageEvent) => void) | undefined;
+  let mockContentWindow: Window;
+
   beforeEach(() => {
+    messageHandler = undefined;
+    mockContentWindow = {} as Window;
     vi.useFakeTimers();
 
     // Mock global objects needed by searchAlbums
     vi.stubGlobal("window", {
-      addEventListener: vi.fn(),
+      addEventListener: vi.fn().mockImplementation((event, handler) => {
+        if (event === "message") messageHandler = handler;
+      }),
       removeEventListener: vi.fn(),
     });
 
@@ -20,6 +27,7 @@ describe("searchAlbums", () => {
             setAttribute: vi.fn(),
             style: {},
             remove: vi.fn(),
+            contentWindow: mockContentWindow,
           };
         }
         return {};
@@ -32,7 +40,6 @@ describe("searchAlbums", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
-
     vi.unstubAllGlobals();
   });
 
@@ -43,5 +50,29 @@ describe("searchAlbums", () => {
     vi.advanceTimersByTime(12000);
 
     await catchPromise;
+  });
+
+  it("rejects with an error when payload type is 'error'", async () => {
+    const searchPromise = searchAlbums("test query");
+
+    expect(messageHandler).toBeDefined();
+    messageHandler!({
+      source: mockContentWindow,
+      data: { type: "error" },
+    });
+
+    await expect(searchPromise).rejects.toThrow("Search failed. Check your connection or add the album manually.");
+  });
+
+  it("rejects with an error when payload is malformed", async () => {
+    const searchPromise = searchAlbums("test query");
+
+    expect(messageHandler).toBeDefined();
+    messageHandler!({
+      source: mockContentWindow,
+      data: { invalid: "data" },
+    });
+
+    await expect(searchPromise).rejects.toThrow("Album search is unavailable. Try again or add it manually.");
   });
 });
