@@ -41,12 +41,15 @@ export function emptyPoster(): Poster {
   };
 }
 export function safeCover(value: string, local = false): string {
+  if (!value) return "";
   if (
     local &&
     /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value)
   )
     return value;
   try {
+    // Use the URL parser's own normalization rules; older browsers retain the fallback.
+    if (typeof URL.canParse === "function" && !URL.canParse(value)) return "";
     const url = new URL(value);
     return url.protocol === "https:" &&
       url.hostname === "cdn-images.dzcdn.net" &&
