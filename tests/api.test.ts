@@ -12,6 +12,7 @@ describe("searchAlbums", () => {
 
     // Mock global objects needed by searchAlbums
     vi.stubGlobal("window", {
+      location: { origin: "https://albums.example.test" },
       addEventListener: vi.fn().mockImplementation((event, handler) => {
         if (event === "message") messageHandler = handler;
       }),
